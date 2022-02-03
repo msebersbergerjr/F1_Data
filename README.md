@@ -1,6 +1,6 @@
 # **F1DATA**
 
-IP Ban count: 1
+IP Ban count: 3
 
 ## Table of Contents
 ___

@@ -5,6 +5,8 @@ IP Ban count: 3
 ## Table of Contents
 ___
 * [About](#about)
+* [Initalization](#initalization)
+* [Features](#features)
 * [Libraries](#libraries)
 * [Set Up](#set-up)
     * [Step 1: Virtual Environment Install](#step-1-virtual-environment-install)
@@ -18,13 +20,33 @@ ___
 Using [Ergast Developer API](http://ergast.com/mrd/) & [F1 Official Website](https://www.formula1.com/), build the Database for the F1 Website
 
 <p>
-Goal is to make it really easy to get the specific information each
-page needs without having to write redundant code for each page
+Goal of this project is to pipeline all the data from the API mentioned above to the F1 website
+so it always stays up-to-date
 
-Really focus on clean organization
 
-Ability to Update the database to the most up-to-date information when needed
 </p>
+
+___
+## **Initalization**
+
+<p>
+The program runs though a initalizer function before displaying the 1st screen.
+This is to check to see if the user is missing any of the required data files that
+this program requires to run.
+
+Because the repository does not include the data folders, it will have a long startup time
+to aquire all the requried data files.
+
+Once the initalization is complete, you will see 3 folders added to your directory
+*   Data
+*   Driver Requests
+*   Driver Responses
+
+This will run in parallel with the F1 seasons
+<p>
+
+___
+## **Features**
 
 ___
 ## **Libraries**

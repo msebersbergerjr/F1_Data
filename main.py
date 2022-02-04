@@ -113,6 +113,8 @@ def get_drivers():
     data = connection('http://ergast.com/api/f1/drivers.json?limit=1000')
     drivers = data['MRData']['DriverTable']['Drivers']
 
+    drivers_list = list()
+
     # Iterate though all drivers
     for _ in drivers:
         driver_id = _['driverId']
@@ -121,7 +123,10 @@ def get_drivers():
         dob = _['dateOfBirth']
         nationality = _['nationality']
         
-        df_driver = df_driver.append({'driver_id': driver_id, 'given_name': given_name, 'family_name': family_name, 'dob': dob, 'nationality': nationality}, ignore_index=True)
+        drivers_list.append({'driver_id': driver_id, 'given_name': given_name, 'family_name': family_name, 'dob': dob, 'nationality': nationality})
+
+    #Convert
+    df_driver = pd.DataFrame(drivers_list)
 
     # Export
     df_driver.to_csv(r'Data/Driver_Table.csv', encoding='utf-8', index=False)
@@ -145,6 +150,8 @@ def get_circuit():
     data = connection('http://ergast.com/api/f1/circuits.json?limit=1000')
     circuits = data['MRData']['CircuitTable']['Circuits']
 
+    circuits_list = list()
+
     # Iterate though all drivers
     for _ in circuits:
         circuit_id = _['circuitId']
@@ -152,7 +159,9 @@ def get_circuit():
         location = _['Location']['locality']
         country = _['Location']['country']
         
-        df_circuit = df_circuit.append({'circuit_id': circuit_id, 'circuit_name': circuit_name, 'location': location, 'country': country}, ignore_index=True)
+        circuits_list.append({'circuit_id': circuit_id, 'circuit_name': circuit_name, 'location': location, 'country': country})
+    #Convert
+    df_circuit = pd.DataFrame(circuits_list)
 
     # Export
     df_circuit.to_csv(r'Data/Circuit_Table.csv', encoding='utf-8', index=False)
@@ -172,6 +181,8 @@ def get_teams():
     column_names = ["team_id", "team_name", "nationality"]
     df_teams = pd.DataFrame(columns=column_names)
 
+    teams_list = list()
+
     # Fetch all information from API
     data = connection('http://ergast.com/api/f1/constructors.json?limit=1000')
     teams = data['MRData']['ConstructorTable']['Constructors']
@@ -182,7 +193,10 @@ def get_teams():
         team_name = _['name']
         nationality = _['nationality']
         
-        df_teams = df_teams.append({'team_id': team_id, 'team_name': team_name, 'nationality': nationality}, ignore_index=True)
+        teams_list.append({'team_id': team_id, 'team_name': team_name, 'nationality': nationality})
+
+    #Convert
+    df_teams = pd.DataFrame(teams_list)
 
     # Export
     df_teams.to_csv(r'Data/Team_Table.csv', encoding='utf-8', index=False)
@@ -201,6 +215,8 @@ def get_current():
     column_names = ["driver_id", "team_id", "points"]
     df_curr = pd.DataFrame(columns=column_names)
 
+    curr_list = list()
+
     # Fetch all information from API
     data = connection('http://ergast.com/api/f1/current/driverStandings.json')
     curr = data['MRData']['StandingsTable']['StandingsLists'][0]['DriverStandings']
@@ -214,7 +230,10 @@ def get_current():
         points = i['points']
         wins = i['wins']
         
-        df_curr = df_curr.append({'driver_id': driver_id, 'team_id': team_id, 'position': position, 'points': points, 'wins': wins}, ignore_index=True)
+        curr_list.append({'driver_id': driver_id, 'team_id': team_id, 'position': position, 'points': points, 'wins': wins})
+    
+    #Convert
+    df_curr = pd.DataFrame(curr_list)
 
     # Export
     df_curr.to_csv(r'Data/Current_Table.csv', encoding='utf-8', index=False)
@@ -233,6 +252,8 @@ def get_first():
     column_names = ["season", "round", "circuit_id", "time", "driver_id"]
     df_first = pd.DataFrame(columns=column_names)
 
+    first_list = list()
+
     for year in range(1950, 2022):
         # Fetch all information from API
         data = connection(f'http://ergast.com/api/f1/{year}/results.json?limit=1000')
@@ -246,7 +267,10 @@ def get_first():
             time = i['Results'][0]['Time']['time']
             driver_id = i['Results'][0]['Driver']['driverId']
 
-            df_first = df_first.append({'season': season, 'round': rround, 'circuit_id': circuit_id, 'time': time, 'driver_id': driver_id, }, ignore_index=True)
+            first_list.append({'season': season, 'round': rround, 'circuit_id': circuit_id, 'time': time, 'driver_id': driver_id, })
+   
+    #Convert
+    df_first = pd.DataFrame(first_list)
 
     # Sort by Year then round Decending
     df_first = df_first.sort_values(['season', 'round'], ascending=[False, False])
@@ -268,6 +292,8 @@ def get_team_history():
     column_names = ["season", "team_id", "position", "points", "wins"]
     df_team_his = pd.DataFrame(columns=column_names)
 
+    team_hist_list = list()
+
     # Iterate though entire history of F1
     for year in range(1950, 2022):
         # Fetch all information from API
@@ -283,9 +309,13 @@ def get_team_history():
                 points = i['points']
                 wins = i['wins']
 
-                df_team_his = df_team_his.append({'season': season, 'team_id': team_id, 'position': position, 'points': points, 'wins': wins}, ignore_index=True)
+                team_hist_list.append({'season': season, 'team_id': team_id, 'position': position, 'points': points, 'wins': wins})
+
         except IndexError:
             pass
+
+    #Convert
+    df_team_his = pd.DataFrame(team_hist_list)
 
     # Export
     df_team_his.to_csv(r'Data/Team_History_Table.csv', encoding='utf-8', index=False)
@@ -676,7 +706,7 @@ def fetch_all():
                         team_id = j['Results'][0]['Constructor']['constructorId']
                         date = j['date']
 
-                    missing_list.append({'season': season, 'round': rround, 'circuit_id': circuitId, 'status': status, 'time': time, 'position': position, 'points': points, 'driver_id': driver_id, 'team_id': team_id, 'date': date, }, ignore_index=True)
+                    missing_list.append({'season': season, 'round': rround, 'circuit_id': circuitId, 'status': status, 'time': time, 'position': position, 'points': points, 'driver_id': driver_id, 'team_id': team_id, 'date': date, })
 
                 pbar.update()
             pbar.close()
@@ -731,6 +761,8 @@ def fetch_group():
         column_names = ["season", "round", "circuit_id", "status", "time", "position", "points", "driver_id", "team_id", "date"]
         df = pd.DataFrame(columns=column_names)
 
+        group_list = list()
+
         # Progress bar
         with tqdm(total =len(drivers), ascii=False) as pbar:
 
@@ -756,10 +788,13 @@ def fetch_group():
                     team_id = j['Results'][0]['Constructor']['constructorId']
                     date = j['date']
 
-                    df = df.append({'season': season, 'round': rround, 'circuit_id': circuitId, 'status': status, 'time': time, 'position': position, 'points': points, 'driver_id': driver_id, 'team_id': team_id, 'date': date, }, ignore_index=True)
+                    group_list.append({'season': season, 'round': rround, 'circuit_id': circuitId, 'status': status, 'time': time, 'position': position, 'points': points, 'driver_id': driver_id, 'team_id': team_id, 'date': date, })
 
                 pbar.update()
             pbar.close()
+
+        #Convert
+        df = pd.DataFrame(group_list)
 
         # Export
         df.to_csv(r'Driver_Responses/Response_{}.csv'.format(group), encoding='utf-8', index=False)

@@ -327,6 +327,7 @@ def get_race_history():
     '''
     Merge all the Driver Response Responses into one csv
     '''
+    pr_light_purple(":: Merge all the Driver Response Responses")
 
     arr = []
 
@@ -345,6 +346,8 @@ def get_race_history():
     # Delete Dataframe
     del df
 
+    true_time()
+
 def true_time():
     '''
     Get the True Time of a race result in the Race History Table
@@ -355,24 +358,42 @@ def true_time():
         DNF
     '''
 
-    # Load driver Dataframe
+    pr_light_purple(":: Converting Driver times")
+
+    # Load Driver Table
     df_drivers = pd.read_csv(r'Data/Driver_Table.csv')
     drivers = df_drivers.loc[:, 'driver_id']
 
-    # Load 1st place Dataframe
+    # Load 1st place Table
     df_first = pd.read_csv(r'Data/First_Table.csv')
 
     # Load Race History Table
     hist_table = pd.read_csv(r'Data/Race_History_Table.csv')
 
-    # Initalize
+    # Initalize new Column true time
     hist_table['true_time'] = ""
 
     # Get Drivers true time for every race
-    hist_table['true_time'] = hist_table[['driver_id', 'season', 'round', 'time']].apply(lambda x: get_race_time(*x), axis=1)
+    hist_table['true_time'] = hist_table[['driver_id', 'season', 'round', 'time']].apply(lambda x: get_race_time(*x, df_first), axis=1)
 
     # Drop Time Column from original csv
     hist_table.drop(labels=['time'], axis=1, inplace=True)
+
+    # Drops the Unnamed: 0 column that gets generated from Pandas
+    hist_table.drop(labels=['Unnamed: 0'], axis=1, inplace=True)
+
+    # Sort by Season, Round so most current race is on top
+    hist_table = hist_table.sort_values(['season','round'],ascending=False)
+
+    # Overwrite Race History Table with true track time
+    hist_table.to_csv('Data/Race_History_Table.csv',index=False)
+
+    del hist_table
+    del df_drivers
+    del df_first
+
+    pr_yellow(':: Completed!')
+    wait_for_input()
 
 def convertHours(raw_time):
     ''' Format H:M:S:Micro '''
@@ -392,9 +413,10 @@ def convertSeconds(raw_time):
     clean_time = timedelta(seconds=dirty_time.second, microseconds=dirty_time.microsecond)
     return clean_time
 
-def get_race_time(driver_id, season, rd, time) -> any:
+def get_race_time(driver_id, season, rd, time, df_first) -> any:
     '''
-    Convert drivers + time to a true time
+    Convert Drivers time, either winning time or + time to complete track time
+    API has alot of dirty data so alot of cleaning is required
     '''
 
     # Time doesn't Exist
@@ -402,22 +424,20 @@ def get_race_time(driver_id, season, rd, time) -> any:
     # For now make it time of 0.0
     if type(time) == float:
         clean_time = timedelta(seconds=0, microseconds=0)
+        #print(driver_id,season,rd,clean_time)
         return str(clean_time)
 
-    # Race winner
+    # Gets Race winner
     winner_frame = (df_first.loc[(df_first['season'] == season) & (df_first['round'] == rd)])[['time', 'driver_id', 'season', 'round']]
 
     if winner_frame.iloc[0,0].count(':') == 2:
-
-        # Rare case hours is 0 in the time
+        # Rare case hours if 0 in the time then removes the 0 in the hour slot
         try:
             clean_winner_time = convertHours(winner_frame.iloc[0,0])
         
         except ValueError:
-            # Remove the 0 in the hour slot
             bad_time = winner_frame.iloc[0,0]
             better_time = bad_time[2:]
-
             clean_winner_time = convertMinute(better_time)
 
     elif winner_frame.iloc[0,0].count(':') == 1:
@@ -425,36 +445,42 @@ def get_race_time(driver_id, season, rd, time) -> any:
     
     else:
         clean_winner_time = convertSeconds(winner_frame.iloc[0,0])
-    
-
-    # print(type(time), time)
 
     if winner_frame.iloc[0,1] == driver_id:
-        # need to format to actual time later
         return str(clean_winner_time)
 
+    # Removes + in front of the times
     elif '+' in time:
 
         dirty_time = time[1:]
 
         # Rare case 's' or 'sec' is in the time
+        # or
+        # Rare case there is a space infront of the hour time EX: ' 1.06.7'
         if 'sec' in dirty_time:
             dirty_time = dirty_time[:-4]
 
         elif 's' in dirty_time:
             dirty_time = dirty_time[:-1]
 
+        elif dirty_time[:1] == ' ':
+            dirty_time = dirty_time[1:]
+
         # Formatting of the time
+        # Rare case where There is a time with no seconds; adds .0 seconds to time EX: '1:10'
         if ':' in dirty_time:
-            # min, sec, micro
-            clean_time = convertMinute(dirty_time)
+            try:
+                # min, sec, micro
+                clean_time = convertMinute(dirty_time)
+            except ValueError:
+                
+                dirty_time += '.0'
+                clean_time = convertMinute(dirty_time)
 
         else:
-
             try:
                 # sec, micro
                 clean_time = convertSeconds(dirty_time)
-
 
             except ValueError:
                 # Rare case Min is => 60
@@ -471,11 +497,10 @@ def get_race_time(driver_id, season, rd, time) -> any:
 
                 # Format into readable time
                 new_time = f'{min}:{sec}.{mill}'
-
                 clean_time = convertMinute(new_time)
 
 
-        # Combine Winner time with driver time
+        # Combine Winner time with driver time to get total lap time
         total_time = str(clean_winner_time + clean_time)
         return total_time
 
@@ -718,7 +743,8 @@ def fetch_all():
         df.to_csv(r'Driver_Responses/Response_Missing.csv', encoding='utf-8', index=False)
         # Delete Dataframe
         del df
-        print('Finished!')
+        get_race_history()
+        break
 
 def fetch_group():
     '''
